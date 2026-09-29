@@ -26,7 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # --------------------------------------------------------------------------
 # plate
-PW, PH, T = 300.0, 210.0, 3.0      # 250 x 180 could not give three 3-sided CAN boards plug room
+PW, PH, T = 250.0, 180.0, 3.0      # the v1 plate - fixed, everything has to fit it
 PLATE_R = 6.0
 COLUMN_INSET = 8.0
 M3 = 3.4
@@ -45,18 +45,16 @@ PLATES = {
     # layer 2: TC397 connector row to the back rim; the injection module turned
     # so its two RJ45s face the front rim; the S31's USB-C to the front and
     # its RJ45/USB-A to the right rim; the 9692's fan over the switch die
-    'B-ecu': [('TC397', 70.0, 145.0, 0),
-              ('FIM-RJ45v2', 62.0, 42.0, 90),
-              ('ESP32-S31', 240.0, 45.0, 0)],
-    # layer 3: the CAN board has connectors on three edges and one free one,
-    # so each board turns its free edge to the middle of the plate:
-    #   left   CAN/LIN/POWER front, ETH/T1S left rim, USB-C back
-    #   right  CAN/LIN/POWER back,  ETH/T1S right rim, USB-C front
-    #   back   CAN/LIN/POWER left,  ETH/T1S back rim,  USB-C right
-    # and the front middle stays open - that is where the cables collect.
-    'C-can': [('KA7-UNO', 60.0, 60.0, 90),
-              ('KA7-UNO', 240.0, 60.0, 270),
-              ('KA7-UNO', 150.0, 150.0, 0)],
+    'B-ecu': [('TC397', 67.0, 120.0, 0),
+              ('FIM-RJ45v2', 40.0, 40.0, 90),
+              ('ESP32-S31', 200.0, 40.0, 0)],
+    # layer 3: two CAN boards per plate. The board has connectors on three
+    # edges and one free one, so the two turn their free edges to each other
+    # and every connector reaches a rim:
+    #   left   CAN/LIN/POWER front, ETH/T1S left,  USB-C back
+    #   right  CAN/LIN/POWER back,  ETH/T1S right, USB-C front
+    'C-can': [('KA7-UNO', 57.0, 90.0, 90),
+              ('KA7-UNO', 193.0, 90.0, 270)],
     'D-top': [],
 }
 FAN_ON = {'B-ecu'}
@@ -64,7 +62,9 @@ FAN_ON = {'B-ecu'}
 # layer gap above each plate kind (plate top to the next plate's underside)
 GAP = {'A-base': 50.0, 'B-ecu': 50.0, 'C-can': 60.0}
 
-STACK = ['A-base', 'B-ecu', 'C-can', 'D-top']   # bottom to top
+STACK = ['A-base', 'B-ecu', 'C-can', 'C-can', 'D-top']   # bottom to top
+FITTED = {3: [0]}                 # level -> boards fitted; the second CAN plate
+                                  # carries the third board, room for a fourth
 N_STACKS = 3                      # one per LAN9692 in the ring, all the same
 PLUG_ROOM = 40.0                  # clear space a port needs in front of it,
                                   # or the rim if that is closer
@@ -337,7 +337,7 @@ def stack_parts(explode=0.0):
     """-> [(level, group, mesh)] for the whole stack, bottom to top."""
     parts, z = [], 0.0
     for lvl, kind in enumerate(STACK):
-        parts += [(lvl, g, m) for g, m in layer_meshes(kind, z)]
+        parts += [(lvl, g, m) for g, m in layer_meshes(kind, z, fitted=FITTED.get(lvl))]
         if kind in GAP:
             nxt = z + T + GAP[kind]
             for x, y in columns():

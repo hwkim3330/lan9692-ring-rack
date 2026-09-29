@@ -51,7 +51,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-const NAMES = ['1 · LAN9692', '2 · TC397 · S31 · injection', '3 · CAN × 3', '4 · top'];
+const NAMES = ['1 · LAN9692', '2 · TC397 · S31 · injection', '3 · CAN × 2', '4 · CAN × 1 (+1 spare)', '5 · top'];
 const el = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -97,7 +97,7 @@ new GLTFLoader().load('stack.glb', (gltf) => {
     levels[L].nodes.forEach((n) => (n.userData.z0 = n.position.z));
   });
   apply();
-  document.getElementById('status').textContent = '300 × 210 mm plates · 3 mm acrylic';
+  document.getElementById('status').textContent = '250 × 180 mm plates · 3 mm acrylic';
 }, undefined, (e) => (document.getElementById('status').textContent = 'could not load stack.glb'));
 
 function apply() {
