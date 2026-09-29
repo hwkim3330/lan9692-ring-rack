@@ -12,7 +12,7 @@ LAN9692 링용 아크릴 랙. 9692가 3대이고, 한 대가 스택 하나의 �
 | 층 | 판 | 올라가는 것 | 위층까지 |
 |---|---|---|---:|
 | 1 | `A-base` | LAN9692 (스탠드오프 10 mm) | 50 mm |
-| 2 | `B-ecu` | TC397 · ESP32-S31 · 인젝션 모듈(RJ45 v2) · 9692 팬 | 50 mm |
+| 2 | `B-ecu` | TC397 · ESP32-S31 · 인젝션 모듈(RJ45 v2) · T1 커넥터 젠더 · 9692 팬 | 50 mm |
 | 3 | `C-can` | CAN 보드 2장 (스탠드오프 35 mm) | 60 mm |
 | 4 | `C-can` | CAN 보드 1장 (한 자리 여유) | 60 mm |
 | 5 | `D-top` | 덮개 | — |
@@ -35,6 +35,7 @@ LAN9692 링용 아크릴 랙. 9692가 3대이고, 한 대가 스택 하나의 �
 **2층**
 - TC397: POWER · SD · USB · RJ45가 뒤쪽 가장자리로 나간다. LIN · CAN은 위에서 꽂는 2x5 헤더다.
 - 인젝션 모듈: 90° 돌려 놓아서 RJ45 2개가 앞쪽을 본다.
+- T1 커넥터 젠더: 앞쪽 가운데 빈자리에 놓았다. MATEnet 2개와 TE 2305987-1이 앞쪽 가장자리로 나간다.
 - ESP32-S31: USB-C 2개가 앞쪽, RJ45 · USB-A가 오른쪽을 본다. 모듈 안테나가 보드 왼쪽 밖으로 6 mm 나와 있어서 그 앞은 비워 뒀다.
 - 팬: 9692 스위치 칩 바로 위, 판 구멍 자리에 있다.
 
@@ -64,7 +65,7 @@ LAN9692 링용 아크릴 랙. 9692가 3대이고, 한 대가 스택 하나의 �
 | LAN9692 EVB | Microchip Gerber/드릴(구멍), PnP(부품 위치) |
 | TC397 AppKit | Infineon Application Kit Manual 그림 7-8(구멍), 그림 2-2(커넥터, ±0.5 mm) |
 | ESP32-S31-Function-CoreBoard-1 | [Espressif 치수 DXF](https://dl.espressif.com/schematics/esp32-s31-function-coreboard-1-dimensions.dxf) |
-| CAN 보드, 인젝션 모듈 | 각 보드의 제작 파일 |
+| CAN 보드, 인젝션 모듈, T1 커넥터 젠더 | 각 보드의 제작 파일(KiCad) |
 
 부품 높이 중 일부는 추정값이다. `boards.py`에서 `assumed`로 표시해 뒀다. 추정값이 틀려도 위층까지 5 mm 이상 여유가 남는다.
 

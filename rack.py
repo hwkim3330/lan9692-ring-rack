@@ -47,7 +47,10 @@ PLATES = {
     # its RJ45/USB-A to the right rim; the 9692's fan over the switch die
     'B-ecu': [('TC397', 67.0, 120.0, 0),
               ('FIM-RJ45v2', 40.0, 40.0, 90),
-              ('ESP32-S31', 200.0, 40.0, 0)],
+              ('ESP32-S31', 200.0, 40.0, 0),
+              # the T1 connector gender in the front gap, its three TE headers
+              # to the front rim
+              ('T1-Gender', 111.0, 25.0, 0)],
     # layer 3: two CAN boards per plate. The board has connectors on three
     # edges and one free one, so the two turn their free edges to each other
     # and every connector reaches a rim:

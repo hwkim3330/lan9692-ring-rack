@@ -140,6 +140,23 @@ FIM2 = dict(
     under=[],
 )
 
+# --------------------------------------------------------------------------
+# T1 connector gender. From its KiCad PCB (Edge.Cuts, MountingHole footprints,
+# F.CrtYd), blocks only. J1/J2 are TE 9-2304372-9 (the MATEnet header the
+# LAN9692 uses too), J3 a TE 2305987-1; all three face and overhang the
+# bottom edge. Three MountingHole footprints plus J3's Ø2.5 peg in the
+# fourth corner.
+T1G = dict(
+    size=(84.0, 28.4), hole_d=2.9, standoff=10.0,
+    holes=[(3.375, 3.40), (80.826, 3.40), (3.049, 24.90), (80.500, 24.90)],
+    parts=[
+        ('MATEnet J2', 6.88, -2.25, 26.62, 20.85, 13.5, '-y', 'KiCad courtyard'),
+        ('TE 2305987-1 J3', 27.07, -3.05, 54.52, 20.05, 12.0, '-y', 'KiCad courtyard, height assumed'),
+        ('MATEnet J1', 57.58, -2.25, 77.32, 20.85, 13.5, '-y', 'KiCad courtyard'),
+    ],
+    under=[],
+)
+
 BOARDS = {'LAN9692': LAN9692, 'TC397': TC397, 'ESP32-S31': S31, 'KA7-UNO': KA7,
-          'FIM-RJ45v2': FIM2}
+          'FIM-RJ45v2': FIM2, 'T1-Gender': T1G}
 PCB_T = 1.6
