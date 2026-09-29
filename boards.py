@@ -99,7 +99,8 @@ S31 = dict(
 
 # --------------------------------------------------------------------------
 # KA7-UNO CAN carrier. Connector spans from its fabrication set, drawn as
-# blocks only. The ALINX AC7200 SoM plugs in UNDERNEATH (the board-to-board
+# blocks only. Connectors on THREE edges - CAN/LIN/POWER left, ETH0/T1S back,
+# USB-C/RESET right; only the bottom edge is free. The ALINX AC7200 SoM plugs in UNDERNEATH (the board-to-board
 # strips are on the solder side), with a 20 mm heatsink under that.
 KA7 = dict(
     size=(70.0, 90.0), hole_d=3.4, standoff=35.0,
@@ -111,7 +112,11 @@ KA7 = dict(
         ('LIN0/1 J7', -0.5, 41.00, 8.7, 59.20, 12.0, '-x', 'fab set, height assumed'),
         ('CAN0/1 J3', -0.5, 21.70, 8.7, 39.90, 12.0, '-x', 'fab set, height assumed'),
         ('POWER J1', -0.5, 11.50, 10.6, 20.30, 12.0, '-x', 'fab set, height assumed'),
-        ('header', 23.26, 23.93, 26.74, 35.45, 8.5, 'top', 'fab set'),
+        ('header 2x5', 23.26, 23.93, 26.74, 35.45, 8.5, 'top', 'fab set'),
+        # right edge: the silkscreen pin labels A1..B8 are a USB-C, its two
+        # shell tabs at y 31.18 / 39.82; RESET sits over the outline notch
+        ('USB-C (right edge)', 62.3, 31.0, 70.8, 40.0, 3.3, '+x', 'fab set silkscreen'),
+        ('RESET button', 66.0, 11.3, 70.4, 16.3, 3.5, '+x', 'fab set, height assumed'),
     ],
     # (name, x0, y0, x1, y1, z_top_below_pcb, z_bottom_below_pcb)
     under=[('AC7200 SoM', 14.08, 1.48, 59.08, 56.48, 3.0, 7.22),

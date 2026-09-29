@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAN9692 ring rack</title>
+<style>
+  :root { --bg: #f3f4f6; --fg: #1f2328; --panel: rgba(255,255,255,.92); --line: #d0d7de; --accent: #eb7d23; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #16181c; --fg: #e6e8eb; --panel: rgba(30,33,38,.92); --line: #3a3f46; }
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #view { position: fixed; inset: 0; }
+  .panel { position: fixed; left: 16px; top: 16px; max-width: min(320px, calc(100vw - 32px));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .panel h1 { font-size: 15px; margin: 0 0 8px; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .row input[type=range] { flex: 1; }
+  label { cursor: pointer; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; font-size: 12px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .hint { font-size: 12px; opacity: .7; margin-top: 6px; }
+  #status { position: fixed; right: 16px; bottom: 16px; font-size: 12px; opacity: .7; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div class="panel">
+  <h1>LAN9692 ring rack · 1 stack</h1>
+  <div class="row"><span>Explode</span><input id="explode" type="range" min="0" max="120" value="40"></div>
+  <div class="row"><span>Acrylic</span><input id="alpha" type="range" min="5" max="100" value="35"></div>
+  <div id="layers"></div>
+  <div class="legend">
+    <span><i class="sw" style="background:#eb7d23"></i>side ports</span>
+    <span><i class="sw" style="background:#e1be3c"></i>headers / pins from above</span>
+    <span><i class="sw" style="background:#bec3ca"></i>heatsink</span>
+    <span><i class="sw" style="background:#285096"></i>SoM</span>
+  </div>
+  <div class="hint">Drag to orbit, scroll to zoom, right-drag to pan.</div>
+</div>
+<div id="status">loading…</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const NAMES = ['1 · LAN9692', '2 · TC397 · S31 · injection', '3 · CAN × 3', '4 · top'];
+const el = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+el.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+sun.position.set(300, -400, 600);
+scene.add(sun);
+
+const levels = {};       // level -> { group, base z }
+const plates = [];
+new GLTFLoader().load('stack.glb', (gltf) => {
+  const root = gltf.scene;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const [lv, grp] = o.name.split('|');
+    const L = +lv.slice(1);
+    (levels[L] ||= { nodes: [] }).nodes.push(o);
+    if (grp === 'plate') {
+      o.material = o.material.clone();
+      o.material.transparent = true;
+      o.material.depthWrite = false;
+      plates.push(o.material);
+    }
+  });
+  scene.add(root);
+  const box = new THREE.Box3().setFromObject(root);
+  const c = box.getCenter(new THREE.Vector3());
+  const r = box.getSize(new THREE.Vector3()).length();
+  controls.target.copy(c);
+  camera.position.set(c.x + r * 0.75, c.y - r * 1.15, c.z + r * 0.8);
+  const ui = document.getElementById('layers');
+  Object.keys(levels).sort().forEach((L) => {
+    const id = 'l' + L;
+    ui.insertAdjacentHTML('beforeend',
+      `<div class="row"><input type="checkbox" id="${id}" checked><label for="${id}">${NAMES[L] || 'layer ' + L}</label></div>`);
+    document.getElementById(id).onchange = (e) => levels[L].nodes.forEach((n) => (n.visible = e.target.checked));
+    levels[L].nodes.forEach((n) => (n.userData.z0 = n.position.z));
+  });
+  apply();
+  document.getElementById('status').textContent = '300 × 210 mm plates · 3 mm acrylic';
+}, undefined, (e) => (document.getElementById('status').textContent = 'could not load stack.glb'));
+
+function apply() {
+  const ex = +document.getElementById('explode').value;
+  const a = +document.getElementById('alpha').value / 100;
+  Object.entries(levels).forEach(([L, v]) => v.nodes.forEach((n) => (n.position.z = n.userData.z0 + L * ex)));
+  plates.forEach((m) => (m.opacity = a));
+}
+document.getElementById('explode').oninput = apply;
+document.getElementById('alpha').oninput = apply;
+
+function resize() {
+  renderer.setSize(el.clientWidth, el.clientHeight);
+  camera.aspect = el.clientWidth / el.clientHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

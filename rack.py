@@ -19,13 +19,14 @@ from shapely.geometry import Point, box
 from shapely.ops import unary_union
 
 import boards as B
+import parts3d as P3
 from render import render
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # --------------------------------------------------------------------------
 # plate
-PW, PH, T = 250.0, 180.0, 3.0
+PW, PH, T = 300.0, 210.0, 3.0      # 250 x 180 could not give three 3-sided CAN boards plug room
 PLATE_R = 6.0
 COLUMN_INSET = 8.0
 M3 = 3.4
@@ -41,18 +42,21 @@ FAN_C = (BOARD_OFF[0] + B.LAN_U1[0], BOARD_OFF[1] + B.LAN_U1[1])
 # what goes on each plate: (board, cx, cy, rot CCW)
 PLATES = {
     'A-base': [('LAN9692', PW / 2, PH / 2, 0)],
-    # layer 2: TC397 connector row to the back rim, the S31's USB-C to the front
-    # and its RJ45/USB-A to the right rim, the injection module's RJ45s to the
-    # left rim; the 9692's fan sits in the gap over the switch die
-    'B-ecu': [('TC397', 67.0, 120.0, 0),
-              ('ESP32-S31', 200.0, 40.0, 0),
-              ('FIM-RJ45v2', 38.0, 40.0, 0)],
-    # layer 3: three CAN boards on three of the four pinwheel places, each board
-    # turned a quarter from the last so every connector edge faces a rim.
-    # The back-right place stays empty - it is where the cables collect.
-    'C-can': [('KA7-UNO', 77.5, 127.5, 0),      # CAN/LIN/POWER left, ETH/T1S back
-              ('KA7-UNO', 87.5, 42.5, 90),      # CAN/LIN/POWER front, ETH/T1S left
-              ('KA7-UNO', 172.5, 52.5, 180)],   # CAN/LIN/POWER right, ETH/T1S front
+    # layer 2: TC397 connector row to the back rim; the injection module turned
+    # so its two RJ45s face the front rim; the S31's USB-C to the front and
+    # its RJ45/USB-A to the right rim; the 9692's fan over the switch die
+    'B-ecu': [('TC397', 70.0, 145.0, 0),
+              ('FIM-RJ45v2', 62.0, 42.0, 90),
+              ('ESP32-S31', 240.0, 45.0, 0)],
+    # layer 3: the CAN board has connectors on three edges and one free one,
+    # so each board turns its free edge to the middle of the plate:
+    #   left   CAN/LIN/POWER front, ETH/T1S left rim, USB-C back
+    #   right  CAN/LIN/POWER back,  ETH/T1S right rim, USB-C front
+    #   back   CAN/LIN/POWER left,  ETH/T1S back rim,  USB-C right
+    # and the front middle stays open - that is where the cables collect.
+    'C-can': [('KA7-UNO', 60.0, 60.0, 90),
+              ('KA7-UNO', 240.0, 60.0, 270),
+              ('KA7-UNO', 150.0, 150.0, 0)],
     'D-top': [],
 }
 FAN_ON = {'B-ecu'}
@@ -294,47 +298,83 @@ def plate_mesh(kind, z):
     return tagged(m, 'plate')
 
 
-def board_meshes(p, z_plate_top, detail):
+def board_meshes(p, z_plate_top, detail=True):
     d = B.BOARDS[p['board']]
     zp = z_plate_top + d['standoff']
     top = zp + B.PCB_T
-    out = []
-    out.append(slab(p['pcb'], zp, top, 'pcb'))
+    out = [slab(p['pcb'], zp, top, 'pcb')]
     for n, r, h, face, src in p['parts']:
-        out.append(slab(r, top, top + h, 'port' if face and face != 'top' else
-                        'top' if face == 'top' else 'part'))
+        if face == 'top':
+            bars, pins = P3.header(n, r, top, h)
+            out += [tagged(m, 'top') for m in bars] + [tagged(m, 'metal') for m in pins]
+        elif face:
+            out += [tagged(m, 'port') for m in P3.side_connector(n, r, top, h, face)]
+        else:
+            out.append(slab(r, top, top + h, 'part'))
     for n, r, zt, zb in p['under']:
-        out.append(slab(r, zp - zb, zp - zt, 'sink' if 'heatsink' in n else 'som'))
+        if 'heatsink' in n:
+            out += [tagged(m, 'sink') for m in P3.heatsink(r, zp - zt, zp - zb)]
+        else:
+            out.append(slab(r, zp - zb, zp - zt, 'som'))
     for x, y, _ in p['holes']:
         out.append(post(x, y, z_plate_top, zp, d=5.0))
+        out.append(tagged(P3.screw_head(x, y, top, d=4.6, hh=1.8), 'metal'))
     return out
 
 
-def layer_meshes(kind, z, detail, fitted=None):
-    parts = [plate_mesh(kind, z)]
+def layer_meshes(kind, z, detail=True, fitted=None):
+    """-> [(group, mesh)]; group names what the viewer can hide or tint."""
+    parts = [('plate', plate_mesh(kind, z))]
     if kind in FAN_ON:
-        parts.append(slab((FAN_C[0] - FAN / 2, FAN_C[1] - FAN / 2,
-                           FAN_C[0] + FAN / 2, FAN_C[1] + FAN / 2), z + T, z + T + FAN_H, 'fan'))
+        parts += [('fan', tagged(m, 'fan')) for m in P3.fan(FAN_C[0], FAN_C[1], z + T, FAN, FAN_H)]
     for i, p in enumerate(placed(kind)):
         if fitted is None or i in fitted:
-            parts += board_meshes(p, z + T, detail)
+            parts += [(p['board'], m) for m in board_meshes(p, z + T)]
+    return parts
+
+
+def stack_parts(explode=0.0):
+    """-> [(level, group, mesh)] for the whole stack, bottom to top."""
+    parts, z = [], 0.0
+    for lvl, kind in enumerate(STACK):
+        parts += [(lvl, g, m) for g, m in layer_meshes(kind, z)]
+        if kind in GAP:
+            nxt = z + T + GAP[kind]
+            for x, y in columns():
+                parts.append((lvl, 'column', post(x, y, z + T, nxt, d=6.0)))
+            z = nxt + explode
+        else:
+            for x, y in columns():
+                parts.append((lvl, 'column', tagged(P3.screw_head(x, y, z + T), 'metal')))
+    for x, y in columns():
+        parts.append((0, 'column', tagged(P3.screw_head(x, y, 0.0, up=False), 'metal')))
     return parts
 
 
 def stack_mesh(explode=0.0):
-    parts, z = [], 0.0
-    for kind in STACK:
-        parts += layer_meshes(kind, z, detail=False)
-        if kind in GAP:
-            nxt = z + T + GAP[kind]
-            for x, y in columns():
-                parts.append(post(x, y, z + T, nxt, d=6.0))
-            z = nxt + explode
-    return trimesh.util.concatenate(parts)
+    return trimesh.util.concatenate([m for _, _, m in stack_parts(explode)])
+
+
+def export_glb(path):
+    """One node per (level, group, colour), so the viewer can explode and tint."""
+    scene = trimesh.Scene()
+    groups = {}
+    for lvl, g, m in stack_parts():
+        c = tuple(m.visual.face_colors[0][:3])
+        groups.setdefault((lvl, g, c), []).append(m)
+    for (lvl, g, c), ms in groups.items():
+        m = trimesh.util.concatenate(ms)
+        m.visual = trimesh.visual.TextureVisuals(material=trimesh.visual.material.PBRMaterial(
+            baseColorFactor=[c[0] / 255, c[1] / 255, c[2] / 255, 1.0],
+            metallicFactor=0.6 if g in ('column',) else 0.0, roughnessFactor=0.55))
+        scene.add_geometry(m, node_name=f'L{lvl}|{g}|{c[0]}_{c[1]}_{c[2]}',
+                           geom_name=f'L{lvl}|{g}|{c[0]}_{c[1]}_{c[2]}')
+    scene.export(path)
+
 
 # --------------------------------------------------------------------------
 def main():
-    for sub in ('dxf', 'img'):
+    for sub in ('dxf', 'img', 'viewer'):
         os.makedirs(os.path.join(HERE, sub), exist_ok=True)
     ok = run_checks()
 
@@ -355,12 +395,13 @@ def main():
 
     m = stack_mesh()
     m.export(os.path.join(HERE, 'stack.stl'))
+    export_glb(os.path.join(HERE, 'viewer', 'stack.glb'))
     print(f'\nstack.stl  {m.extents.round(1).tolist()} mm, {len(m.faces)} faces')
 
     if '--no-png' not in sys.argv:
         for kind in PLATES:
             if PLATES[kind]:
-                mm = trimesh.util.concatenate(layer_meshes(kind, 0.0, detail=False))
+                mm = trimesh.util.concatenate([m for _, m in layer_meshes(kind, 0.0)])
                 render(mm, elev=38, azim=-35).save(os.path.join(HERE, 'img', f'layer_{kind}.png'))
         render(stack_mesh(explode=45.0), elev=20, azim=-40).save(os.path.join(HERE, 'img', 'stack.png'))
         render(stack_mesh(), elev=22, azim=-40).save(os.path.join(HERE, 'img', 'stack_closed.png'))
