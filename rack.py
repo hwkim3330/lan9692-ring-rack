@@ -376,6 +376,96 @@ def export_glb(path):
 
 
 # --------------------------------------------------------------------------
+# order: every screw, standoff and plate, counted from the layout itself
+def bom():
+    """-> [(group, item, spec, qty, note)] for N_STACKS stacks."""
+    from collections import Counter
+    c = Counter()
+    notes = {}
+
+    def add(group, item, spec, n, note=''):
+        c[(group, item, spec)] += n * N_STACKS
+        if note:
+            notes[(group, item, spec)] = note
+
+    for kind in PLATES:
+        n = STACK.count(kind)
+        if n:
+            add('acrylic', f'plate {kind}', f'clear cast acrylic 3 mm, {PW:.0f} x {PH:.0f}, R{PLATE_R:.0f}',
+                n, f'dxf/{kind}.dxf')
+    # columns: M/F, male end up; each stud crosses the plate above it and
+    # threads into the next standoff, so one hole per corner does both joints
+    for kind in STACK:
+        if kind in GAP:
+            add('column', 'hex standoff M/F', f'M3 x {GAP[kind]:.0f}, male 6 mm', 4,
+                'male end up; the stud crosses the plate above into the next standoff')
+    add('column', 'screw, pan head', 'M3 x 8', 4, 'up through plate A into the first column standoff')
+    add('column', 'nut', 'M3', 4, 'on the four studs above the top plate')
+    add('column', 'rubber foot', 'self-adhesive, ~10 mm', 4, 'under plate A')
+    # boards: F/F standoffs, a screw from under the plate and one from above
+    for lvl, kind in enumerate(STACK):
+        f = FITTED.get(lvl)
+        for i, p in enumerate(placed(kind)):
+            if f is not None and i not in f:
+                continue
+            d = B.BOARDS[p['board']]
+            m = 'M2.5' if d['hole_d'] < 3.2 else 'M3'
+            k = len(d['holes'])
+            key = ('boards', 'hex standoff F/F', f"{m} x {d['standoff']:.0f}")
+            who = notes.get(key, '')
+            if p['board'] not in who:
+                who = (who + ', ' if who else '') + p['board']
+            if p['board'] == 'LAN9692':
+                who += ' (board drill Ø3.048 - try an M3 by hand, use M2.5 if it binds)'
+            add(*key, k, who)
+            add('boards', 'screw, pan head', f'{m} x 6', k, 'down through the board')
+            add('boards', 'screw, pan head', f'{m} x 8', k, 'up through the plate')
+            add('boards', 'washer, nylon', m, k, 'under every screw head that lands on acrylic')
+    # fan over the switch die, on top of the B plate
+    add('fan', 'fan', '40 x 40 x 10 mm, 12 V', 1, 'Noctua NF-A4x10 FLX; 32 mm hole pitch')
+    add('fan', 'screw, pan head', 'M3 x 20', 4, 'down through the fan and plate B')
+    add('fan', 'nut, nyloc', 'M3', 4, 'the fan is the one part that vibrates')
+    add('power', 'DC adapter', '12 V 5 A, 5.5 x 2.5 mm, centre +', 1,
+        'Mean Well GST60A12-P1M (P1M = 2.5 mm; P1J is 2.1 and contacts badly)')
+    add('power', 'DC splitter', '1 female -> 2 male, 5.5 x 2.5 mm', 1, 'NOT 5.5 x 2.1')
+    add('power', 'barrel socket to leads', 'female 5.5 x 2.5, 18 AWG', 1,
+        'Tensility 10-02879 - the fan joins here. Meter which lead is the centre pin')
+    return [(g, i, s_, q, notes.get((g, i, s_), '')) for (g, i, s_), q in c.items()]
+
+
+def write_order():
+    rows = bom()
+    with open(os.path.join(HERE, 'BOM.csv'), 'w') as f:
+        f.write('group,item,spec,qty,note\n')
+        for r in rows:
+            f.write(','.join(f'"{x}"' if isinstance(x, str) and (',' in x) else str(x) for x in r) + '\n')
+    md = [f'# 주문서 - 스택 {N_STACKS}개\n',
+          f'이 파일은 `rack.py`가 배치에서 직접 세어서 만든다. 손으로 고치지 말 것.\n',
+          '## 1. 레이저 커팅 (아크릴)\n',
+          f'- 재질: **투명 캐스트 아크릴 3 mm**, 양면 보호필름 붙은 채로',
+          f'- 판: **{PW:.0f} × {PH:.0f} mm**, 모서리 R{PLATE_R:.0f}. 도면은 DXF(mm, R12), 레이어 `CUT`만 있다',
+          '- 구멍 공차: 지름 +0.1 / -0 (M3 → Ø3.4, M2.5 → Ø2.9)',
+          '- 보낼 파일: `order-dxf.zip` 하나\n',
+          '| 도면 | 수량 | 구멍 |', '|---|---:|---:|']
+    for kind in PLATES:
+        n = N_STACKS * STACK.count(kind)
+        if n:
+            md.append(f'| `dxf/{kind}.dxf` | {n} | {len(features(kind))} |')
+    md.append(f'| **합계** | **{N_STACKS * len(STACK)}** | |\n')
+    md.append('## 2. 하드웨어\n')
+    md.append('| 구분 | 품목 | 규격 | 수량 | 메모 |')
+    md.append('|---|---|---|---:|---|')
+    for g, i, s_, q, n in rows:
+        if g != 'acrylic':
+            md.append(f'| {g} | {i} | {s_} | {q} | {n} |')
+    md.append('\n여분: 나사·너트·와셔는 10 % 더 사는 게 좋다. M3 x 60 스탠드오프가 없으면 30 + 30으로 이어도 된다.\n')
+    md.append('## 3. 이미 있는 것 (주문 안 함)\n')
+    md.append('- CAN 보드 방열판 20 mm (이미 붙어 있음)')
+    md.append('- 보드 자체: LAN9692 EVB, TC397, ESP32-S31, CAN 보드, 인젝션 모듈 v2, T1 커넥터 젠더\n')
+    open(os.path.join(HERE, 'ORDER.md'), 'w').write('\n'.join(md))
+
+
+# --------------------------------------------------------------------------
 def main():
     for sub in ('dxf', 'img', 'viewer'):
         os.makedirs(os.path.join(HERE, sub), exist_ok=True)
@@ -396,6 +486,7 @@ def main():
             info.external_attr = 0o644 << 16
             z.writestr(info, open(p, 'rb').read())
 
+    write_order()
     m = stack_mesh()
     m.export(os.path.join(HERE, 'stack.stl'))
     export_glb(os.path.join(HERE, 'viewer', 'stack.glb'))

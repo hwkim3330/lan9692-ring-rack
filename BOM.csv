@@ -1,0 +1,27 @@
+group,item,spec,qty,note
+acrylic,plate A-base,"clear cast acrylic 3 mm, 250 x 180, R6",3,dxf/A-base.dxf
+acrylic,plate B-ecu,"clear cast acrylic 3 mm, 250 x 180, R6",3,dxf/B-ecu.dxf
+acrylic,plate C-can,"clear cast acrylic 3 mm, 250 x 180, R6",6,dxf/C-can.dxf
+acrylic,plate D-top,"clear cast acrylic 3 mm, 250 x 180, R6",3,dxf/D-top.dxf
+column,hex standoff M/F,"M3 x 50, male 6 mm",24,male end up; the stud crosses the plate above into the next standoff
+column,hex standoff M/F,"M3 x 60, male 6 mm",24,male end up; the stud crosses the plate above into the next standoff
+column,"screw, pan head",M3 x 8,12,up through plate A into the first column standoff
+column,nut,M3,12,on the four studs above the top plate
+column,rubber foot,"self-adhesive, ~10 mm",12,under plate A
+boards,hex standoff F/F,M3 x 10,24,"LAN9692 (board drill Ø3.048 - try an M3 by hand, use M2.5 if it binds)"
+boards,"screw, pan head",M3 x 6,84,down through the board
+boards,"screw, pan head",M3 x 8,84,up through the plate
+boards,"washer, nylon",M3,84,under every screw head that lands on acrylic
+boards,hex standoff F/F,M3 x 8,24,"TC397, ESP32-S31"
+boards,hex standoff F/F,M2.5 x 20,12,FIM-RJ45v2
+boards,"screw, pan head",M2.5 x 6,24,down through the board
+boards,"screw, pan head",M2.5 x 8,24,up through the plate
+boards,"washer, nylon",M2.5,24,under every screw head that lands on acrylic
+boards,hex standoff F/F,M2.5 x 10,12,T1-Gender
+boards,hex standoff F/F,M3 x 35,36,KA7-UNO
+fan,fan,"40 x 40 x 10 mm, 12 V",3,Noctua NF-A4x10 FLX; 32 mm hole pitch
+fan,"screw, pan head",M3 x 20,12,down through the fan and plate B
+fan,"nut, nyloc",M3,12,the fan is the one part that vibrates
+power,DC adapter,"12 V 5 A, 5.5 x 2.5 mm, centre +",3,Mean Well GST60A12-P1M (P1M = 2.5 mm; P1J is 2.1 and contacts badly)
+power,DC splitter,"1 female -> 2 male, 5.5 x 2.5 mm",3,NOT 5.5 x 2.1
+power,barrel socket to leads,"female 5.5 x 2.5, 18 AWG",3,Tensility 10-02879 - the fan joins here. Meter which lead is the centre pin
