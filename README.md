@@ -27,14 +27,14 @@ LAN9692 링용 아크릴 랙. 9692가 3대이고, 한 대가 스택 하나의 �
 ## 출력판 (아크릴 대신 A1)
 
 `python3 print_plates.py` → `print/<판>.stl`. 외형·기둥·보드 구멍·팬 구멍이 DXF와 똑같아서 아크릴 판과 섞어 써도 된다.
-PLA 3 mm는 거의 꽉 채워야 아크릴만큼 단단해서, 판 밑 가장자리에 3 × 4 mm 테두리를 둘렀고(구멍에서 3 mm 이상 떨어짐) 채움 40 %로 자른다.
+아크릴처럼 납작한 3 mm 판이다(튀어나온 테두리 없음). PLA 3 mm는 꽉 채워야 아크릴만큼 단단해서 채움 100 %(지그재그)로 자른다.
 윗면을 베드에 대고 뽑는다(브림 없음, 250 × 180 은 A1 256 베드에 들어간다).
 
 | 판 | 시간 | PLA |
 |---|---|---|
-| A-base · B-ecu · C-can · D-top | 장당 약 2 h 35 m | 장당 약 137 g |
+| A-base · B-ecu · C-can · D-top | 장당 약 2 h 26–33 m | 장당 약 162–167 g |
 
-한 스택(A, B, C, C, D)이 약 12 h 50 m / 690 g. 출력 파일은 [hwkim3330/prints `lan9692-rack/`](https://github.com/hwkim3330/prints/tree/main/lan9692-rack).
+한 스택(A, B, C, C, D)이 약 12 h 30 m / 830 g. 출력 파일은 [hwkim3330/prints `lan9692-rack/`](https://github.com/hwkim3330/prints/tree/main/lan9692-rack).
 
 ## 배치
 
