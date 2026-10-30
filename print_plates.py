@@ -5,7 +5,7 @@
 
 Same outline, corner columns, board holes and fan bore as the DXF (features() in rack.py), so a printed plate and
 an acrylic one swap freely. Flat 3 mm, nothing sticking out (the first A-base had a rim under the edge; the user wants
-it flat like the acrylic). PLA at 3 mm is about as stiff as 3 mm acrylic only when it is solid: slice at 100 % infill.
+it flat like the acrylic). Slice at 40 % infill: the user found the first A-base sturdy enough at 40 %.
 250 x 180 fits the A1's 256 mm bed with no brim.
 """
 import os
